@@ -1,0 +1,201 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+paths:
+  /api/v1/ads:
+    get:
+      tags:
+      - Anúncios
+      summary: Lista anúncios publicados (aprovados)
+      description: Ordenados do mais recente para o mais antigo. Página começa em
+        0.
+      operationId: list
+      parameters:
+      - name: category
+        in: query
+        required: false
+        schema:
+          type: string
+        example: eletronicos
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 100
+          minimum: 1
+      responses:
+        "200":
+          description: Página de anúncios
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageResponseAdResponse"
+        "400":
+          description: Categoria ou paginação inválida
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PageResponseAdResponse"
+    post:
+      tags:
+      - Anúncios
+      summary: Cria um anúncio e o submete à moderação
+      description: "Retorna 201 com o status resultante: approved, rejected (com rejectionReason)\
+        \ ou pending_moderation, quando a moderação está indisponível e será reprocessada."
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAdRequest"
+        required: true
+      responses:
+        "201":
+          description: Anúncio criado
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdResponse"
+        "400":
+          description: Payload inválido
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdResponse"
+  /api/v1/ads/{id}:
+    get:
+      tags:
+      - Anúncios
+      summary: "Consulta um anúncio em qualquer status, com o motivo da reprovaçã\
+        o quando houver"
+      operationId: getById
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: Anúncio encontrado
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdResponse"
+        "404":
+          description: Anúncio inexistente
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdResponse"
+components:
+  schemas:
+    CreateAdRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Entre 10 e 100 caracteres
+          example: Bicicleta aro 29 Caloi
+        description:
+          type: string
+          example: "Pouco uso, revisada, com nota fiscal."
+        price:
+          type: number
+          description: "Maior que zero, até 2 casas decimais"
+          example: 1500.0
+        category:
+          type: string
+          enum:
+          - eletronicos
+          - moveis
+          - veiculos
+          - imoveis
+          - esportes
+          - colecionaveis
+          example: esportes
+        images:
+          type: array
+          description: De 1 a 10 URLs http(s)
+          example:
+          - https://img.example.com/bike.jpg
+          items:
+            type: string
+      required:
+      - category
+      - description
+      - images
+      - price
+      - title
+    AdResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        category:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum:
+          - pending_moderation
+          - approved
+          - rejected
+        rejectionReason:
+          type: string
+          description: Preenchido somente quando status = rejected
+          example: price_out_of_range
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        moderatedAt:
+          type: string
+          format: date-time
+    PageResponseAdResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
