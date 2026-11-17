@@ -1,0 +1,66 @@
+# Sobe PostgreSQL, o mock oficial de moderação (backend/api-mock, usado sem alterações) e a API.
+#   docker compose up --build
+# Carga opcional do seed (57 anúncios) pela própria API:
+#   docker compose --profile seed run --rm seed
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-marketplace}
+      POSTGRES_USER: ${POSTGRES_USER:-marketplace}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-marketplace}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  moderation-api:
+    build: ./backend/api-mock
+    ports:
+      - "8787:8787"
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  app:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      moderation-api:
+        condition: service_started
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-marketplace}
+      DB_USERNAME: ${POSTGRES_USER:-marketplace}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-marketplace}
+      MODERATION_BASE_URL: http://moderation-api:8787
+      LOGGING_STRUCTURED_FORMAT_CONSOLE: ecs
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  seed:
+    profiles: ["seed"]
+    image: node:22-alpine
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./backend/api-mock/seed:/seed:ro
+    environment:
+      API_URL: http://app:8080
+      SEED_FILE: /seed/ads.json
+    command: ["node", "/scripts/seed-ads.mjs"]

@@ -1,0 +1,727 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-11-17T16:15:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2023.5.8",
+  "resources": [
+    {
+      "_id": "wrk_marketplace_ads",
+      "_type": "workspace",
+      "name": "Marketplace Ads API (OLX)",
+      "scope": "collection",
+      "description": "Cenários de sucesso e de erro da API e da moderação. Suba tudo com `docker compose up --build -d`."
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "parentId": "wrk_marketplace_ads",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "mock_url": "http://localhost:8787",
+        "ad_id": "COLE_AQUI_UM_ID_RETORNADO_NO_POST"
+      }
+    },
+    {
+      "_id": "fld_ok",
+      "_type": "request_group",
+      "parentId": "wrk_marketplace_ads",
+      "name": "1. API — fluxo feliz",
+      "description": "",
+      "metaSortKey": 1
+    },
+    {
+      "_id": "req_01",
+      "_type": "request",
+      "parentId": "fld_ok",
+      "name": "Criar anúncio (aprovado)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 201, header `Location`, `status: approved`, `rejectionReason: null`.\n\nSe vier `pending_moderation`, o mock sorteou erro (20%) nas 3 tentativas: o job aprova em até ~60 s. Copie o `id` para a variável `ad_id` do ambiente.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-Request-Id",
+          "value": "demo-ok-001"
+        }
+      ],
+      "metaSortKey": 1,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Bicicleta aro 29 Caloi\",\n  \"description\": \"Pouco uso, revisada, com nota fiscal.\",\n  \"price\": 1500.00,\n  \"category\": \"esportes\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_02",
+      "_type": "request",
+      "parentId": "fld_ok",
+      "name": "Listar publicados (filtro + paginação)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/ads?category=esportes&page=0&size=10",
+      "description": "**Esperado:** 200, só anúncios `approved` da categoria, do mais recente para o mais antigo, com `page`, `size`, `totalElements` e `totalPages`.",
+      "headers": [],
+      "metaSortKey": 2,
+      "body": {}
+    },
+    {
+      "_id": "req_03",
+      "_type": "request",
+      "parentId": "fld_ok",
+      "name": "Detalhe por id",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/ads/{{ _.ad_id }}",
+      "description": "**Esperado:** 200 com todos os campos. Para um anúncio reprovado, `rejectionReason` vem preenchido.",
+      "headers": [],
+      "metaSortKey": 3,
+      "body": {}
+    },
+    {
+      "_id": "req_04",
+      "_type": "request",
+      "parentId": "fld_ok",
+      "name": "Health",
+      "method": "GET",
+      "url": "{{ _.base_url }}/actuator/health",
+      "description": "**Esperado:** 200, `status: UP`.",
+      "headers": [],
+      "metaSortKey": 4,
+      "body": {}
+    },
+    {
+      "_id": "fld_val",
+      "_type": "request_group",
+      "parentId": "wrk_marketplace_ads",
+      "name": "2. API — validação (400)",
+      "description": "Erros de entrada. Todos devem responder 400 em Problem Details (`application/problem+json`) com `code`, `errors[]` e `correlationId`, **sem chamar a moderação**.",
+      "metaSortKey": 2
+    },
+    {
+      "_id": "req_05",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Título curto (< 10)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400 `VALIDATION_ERROR`, `errors[0].field = title`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 5,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Curto\",\n  \"description\": \"Descrição válida.\",\n  \"price\": 10,\n  \"category\": \"esportes\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_06",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Título longo (> 100)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400 `VALIDATION_ERROR`, `errors[0].field = title`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 6,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"description\": \"Descrição válida.\",\n  \"price\": 10,\n  \"category\": \"esportes\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_07",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Preço zero",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400, `errors[0].field = price`, mensagem `price must be greater than zero`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 7,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Bicicleta aro 29 Caloi\",\n  \"description\": \"Descrição válida.\",\n  \"price\": 0,\n  \"category\": \"esportes\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_08",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Preço negativo",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400, `errors[0].field = price`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 8,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Bicicleta aro 29 Caloi\",\n  \"description\": \"Descrição válida.\",\n  \"price\": -50,\n  \"category\": \"esportes\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_09",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Preço com 3 casas decimais",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400, `errors[0].field = price`, mensagem `at most 2 decimal places`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 9,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Bicicleta aro 29 Caloi\",\n  \"description\": \"Descrição válida.\",\n  \"price\": 10.999,\n  \"category\": \"esportes\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_10",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Sem imagens",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400, `errors[0].field = images`, mensagem `at least one image is required`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 10,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Bicicleta aro 29 Caloi\",\n  \"description\": \"Descrição válida.\",\n  \"price\": 10,\n  \"category\": \"esportes\",\n  \"images\": []\n}"
+      }
+    },
+    {
+      "_id": "req_11",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Imagem que não é URL http(s)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400, `errors[0].field = images`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 11,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Bicicleta aro 29 Caloi\",\n  \"description\": \"Descrição válida.\",\n  \"price\": 10,\n  \"category\": \"esportes\",\n  \"images\": [\"ftp://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_12",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Mais de 10 imagens",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400, `errors[0].field = images` (limite técnico, ver DECISIONS A13).",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 12,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Bicicleta aro 29 Caloi\",\n  \"description\": \"Descrição válida.\",\n  \"price\": 10,\n  \"category\": \"esportes\",\n  \"images\": [\"https://img.example.com/0.jpg\", \"https://img.example.com/1.jpg\", \"https://img.example.com/2.jpg\", \"https://img.example.com/3.jpg\", \"https://img.example.com/4.jpg\", \"https://img.example.com/5.jpg\", \"https://img.example.com/6.jpg\", \"https://img.example.com/7.jpg\", \"https://img.example.com/8.jpg\", \"https://img.example.com/9.jpg\", \"https://img.example.com/10.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_13",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Descrição em branco",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400, `errors[0].field = description`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 13,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Bicicleta aro 29 Caloi\",\n  \"description\": \"   \",\n  \"price\": 10,\n  \"category\": \"esportes\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_14",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Categoria inexistente",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400, `errors[0].field = category`, listando as categorias aceitas.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 14,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Boneco colecionável raro\",\n  \"description\": \"Descrição válida.\",\n  \"price\": 10,\n  \"category\": \"brinquedos\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_15",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Campos obrigatórios ausentes",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400 `VALIDATION_ERROR` com 4 itens em `errors` (description, price, category, images).",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 15,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Bicicleta aro 29 Caloi\"\n}"
+      }
+    },
+    {
+      "_id": "req_16",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "JSON malformado",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** 400 `MALFORMED_REQUEST`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 16,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{ \"title\": \"Bicicleta aro 29\", "
+      }
+    },
+    {
+      "_id": "req_17",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Listagem com size > 100",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/ads?size=101",
+      "description": "**Esperado:** 400 `VALIDATION_ERROR`.",
+      "headers": [],
+      "metaSortKey": 17,
+      "body": {}
+    },
+    {
+      "_id": "req_18",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Listagem com page negativa",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/ads?page=-1",
+      "description": "**Esperado:** 400 `VALIDATION_ERROR`.",
+      "headers": [],
+      "metaSortKey": 18,
+      "body": {}
+    },
+    {
+      "_id": "req_19",
+      "_type": "request",
+      "parentId": "fld_val",
+      "name": "Listagem com categoria inexistente",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/ads?category=brinquedos",
+      "description": "**Esperado:** 400, `errors[0].field = category`.",
+      "headers": [],
+      "metaSortKey": 19,
+      "body": {}
+    },
+    {
+      "_id": "fld_http",
+      "_type": "request_group",
+      "parentId": "wrk_marketplace_ads",
+      "name": "3. API — recursos e métodos",
+      "description": "",
+      "metaSortKey": 3
+    },
+    {
+      "_id": "req_20",
+      "_type": "request",
+      "parentId": "fld_http",
+      "name": "Anúncio inexistente (404)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/ads/6f1c2a3e-0000-4000-8000-000000000000",
+      "description": "**Esperado:** 404 `AD_NOT_FOUND`. O `correlationId` do corpo é o mesmo do header `X-Request-Id` enviado.",
+      "headers": [
+        {
+          "name": "X-Request-Id",
+          "value": "demo-404"
+        }
+      ],
+      "metaSortKey": 20,
+      "body": {}
+    },
+    {
+      "_id": "req_21",
+      "_type": "request",
+      "parentId": "fld_http",
+      "name": "Id malformado (400)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/ads/abc",
+      "description": "**Esperado:** 400 `INVALID_PARAMETER`.",
+      "headers": [],
+      "metaSortKey": 21,
+      "body": {}
+    },
+    {
+      "_id": "req_22",
+      "_type": "request",
+      "parentId": "fld_http",
+      "name": "Rota inexistente (404)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/nao-existe",
+      "description": "**Esperado:** 404 em Problem Details, sem stack trace.",
+      "headers": [],
+      "metaSortKey": 22,
+      "body": {}
+    },
+    {
+      "_id": "req_23",
+      "_type": "request",
+      "parentId": "fld_http",
+      "name": "Método não suportado (405)",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/v1/ads/{{ _.ad_id }}",
+      "description": "**Esperado:** 405 `METHOD_NOT_ALLOWED` (a API não permite remoção).",
+      "headers": [],
+      "metaSortKey": 23,
+      "body": {}
+    },
+    {
+      "_id": "fld_rej",
+      "_type": "request_group",
+      "parentId": "wrk_marketplace_ads",
+      "name": "4. Moderação — reprovações (via API)",
+      "description": "Decisões de negócio do mock. Esperado: 201 com `status: rejected` e o motivo. Se vier `pending_moderation`, foi o erro aleatório de 20% do mock: o job reprocessa e o GET por id mostra a reprovação depois.",
+      "metaSortKey": 4
+    },
+    {
+      "_id": "req_24",
+      "_type": "request",
+      "parentId": "fld_rej",
+      "name": "Contato no texto (whatsapp)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** `rejected`, `rejectionReason: contact_info_not_allowed`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 24,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"iPhone 13 128GB seminovo\",\n  \"description\": \"Chama no whatsapp para negociar.\",\n  \"price\": 3500.00,\n  \"category\": \"eletronicos\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_25",
+      "_type": "request",
+      "parentId": "fld_rej",
+      "name": "Contato no texto (telefone)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** `rejected`, `rejectionReason: contact_info_not_allowed`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 25,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Sofá retrátil 3 lugares\",\n  \"description\": \"Ligue 11 98765-4321 para combinar.\",\n  \"price\": 1200,\n  \"category\": \"moveis\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_26",
+      "_type": "request",
+      "parentId": "fld_rej",
+      "name": "Item proibido",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** `rejected`, `rejectionReason: prohibited_item`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 26,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Cigarro eletrônico novo lacrado\",\n  \"description\": \"Na caixa, nunca usado.\",\n  \"price\": 150,\n  \"category\": \"eletronicos\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_27",
+      "_type": "request",
+      "parentId": "fld_rej",
+      "name": "Preço abaixo da faixa da categoria",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** `rejected`, `rejectionReason: price_out_of_range` (veiculos: R$ 1.000 a R$ 500.000).",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 27,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Fiat Uno 2010 completo\",\n  \"description\": \"Carro em bom estado.\",\n  \"price\": 500,\n  \"category\": \"veiculos\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_28",
+      "_type": "request",
+      "parentId": "fld_rej",
+      "name": "Preço acima da faixa da categoria",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** `rejected`, `rejectionReason: price_out_of_range` (eletronicos: até R$ 50.000).",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 28,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Notebook gamer top de linha\",\n  \"description\": \"Configuração máxima.\",\n  \"price\": 60000,\n  \"category\": \"eletronicos\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_29",
+      "_type": "request",
+      "parentId": "fld_rej",
+      "name": "Preço no limite da faixa (aprovado)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado:** `approved`: R$ 10,00 é o mínimo de eletronicos e o limite é inclusivo.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "metaSortKey": 29,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Cabo USB-C 2 metros\",\n  \"description\": \"Novo, sem uso.\",\n  \"price\": 10.00,\n  \"category\": \"eletronicos\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "fld_mock",
+      "_type": "request_group",
+      "parentId": "wrk_marketplace_ads",
+      "name": "5. Moderação — falhas técnicas (mock direto)",
+      "description": "Chamadas DIRETAS ao mock da OLX (porta 8787), usando o header de teste `x-mock-force` do próprio mock. Mostram as respostas que o nosso `HttpModerationGateway` trata (cobertas por `HttpModerationGatewayTest` com WireMock). A nossa API não envia esse header.",
+      "metaSortKey": 5
+    },
+    {
+      "_id": "req_30",
+      "_type": "request",
+      "parentId": "fld_mock",
+      "name": "Health do mock",
+      "method": "GET",
+      "url": "{{ _.mock_url }}/health",
+      "description": "**Esperado:** 200 `{\"status\":\"ok\"}`.",
+      "headers": [],
+      "metaSortKey": 30,
+      "body": {}
+    },
+    {
+      "_id": "req_31",
+      "_type": "request",
+      "parentId": "fld_mock",
+      "name": "Erro interno forçado (500)",
+      "method": "POST",
+      "url": "{{ _.mock_url }}/v1/moderation/check",
+      "description": "**Esperado:** 500 `{\"error\":\"internal_error\"}`. Na nossa API vira retentativa e, se persistir, `pending_moderation`: nunca reprovação.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "x-mock-force",
+          "value": "error"
+        }
+      ],
+      "metaSortKey": 31,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Bicicleta aro 29 Caloi\",\n  \"description\": \"Pouco uso.\",\n  \"price\": 1500,\n  \"category\": \"esportes\"\n}"
+      }
+    },
+    {
+      "_id": "req_32",
+      "_type": "request",
+      "parentId": "fld_mock",
+      "name": "Rate limit forçado (429)",
+      "method": "POST",
+      "url": "{{ _.mock_url }}/v1/moderation/check",
+      "description": "**Esperado:** 429 com header `Retry-After: 1`. O gateway espera o `Retry-After` (com teto de 2 s) e tenta de novo.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "x-mock-force",
+          "value": "rate-limit"
+        }
+      ],
+      "metaSortKey": 32,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Bicicleta aro 29 Caloi\",\n  \"description\": \"Pouco uso.\",\n  \"price\": 1500,\n  \"category\": \"esportes\"\n}"
+      }
+    },
+    {
+      "_id": "req_33",
+      "_type": "request",
+      "parentId": "fld_mock",
+      "name": "Payload inválido (400)",
+      "method": "POST",
+      "url": "{{ _.mock_url }}/v1/moderation/check",
+      "description": "**Esperado:** 400 `validation_error` com `details`. Não é retentado: o nosso domínio já impede esse payload.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "x-mock-force",
+          "value": "off"
+        }
+      ],
+      "metaSortKey": 33,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"\",\n  \"price\": \"abc\",\n  \"category\": \"brinquedos\"\n}"
+      }
+    },
+    {
+      "_id": "req_34",
+      "_type": "request",
+      "parentId": "fld_mock",
+      "name": "Reprovação: veja o nome do campo",
+      "method": "POST",
+      "url": "{{ _.mock_url }}/v1/moderation/check",
+      "description": "**Esperado:** 200 `{\"status\":\"rejected\",\"rejection_reason\":\"contact_info_not_allowed\"}`.\n\nO `API.md` documenta o campo como `reason`, mas o mock responde `rejection_reason` (ambiguidade A1 no DECISIONS.md). `x-mock-force: off` desliga o erro aleatório e o rate limit.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "x-mock-force",
+          "value": "off"
+        }
+      ],
+      "metaSortKey": 34,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"iPhone 13 128GB\",\n  \"description\": \"Chama no whatsapp\",\n  \"price\": 3500,\n  \"category\": \"eletronicos\"\n}"
+      }
+    },
+    {
+      "_id": "fld_down",
+      "_type": "request_group",
+      "parentId": "wrk_marketplace_ads",
+      "name": "6. Moderação — indisponibilidade real",
+      "description": "Roteiro manual com o container do mock parado. Prova que indisponibilidade NÃO vira reprovação e que o job recupera o anúncio.\n\n1. Terminal: `docker compose stop moderation-api`\n2. Rode **6.1**: 201 com `status: pending_moderation` (conexão recusada nas 3 tentativas). Copie o `id` para `ad_id`.\n3. Rode **6.2**: continua `pending_moderation`. Liste os publicados: ele não aparece.\n4. Terminal: `docker compose start moderation-api`\n5. Aguarde ~30–60 s (job a cada 30 s, para pendentes com mais de 30 s).\n6. Rode **6.2** de novo: `approved`, com `moderatedAt` preenchido.\n\nLogs: `docker compose logs app` mostram as tentativas e `Moderation unavailable, ad ... stays pending`.",
+      "metaSortKey": 6
+    },
+    {
+      "_id": "req_35",
+      "_type": "request",
+      "parentId": "fld_down",
+      "name": "6.1 Criar com moderação fora do ar",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/ads",
+      "description": "**Esperado (mock parado):** 201, `status: pending_moderation`, `rejectionReason: null`, `moderatedAt: null`.",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "X-Request-Id",
+          "value": "demo-outage"
+        }
+      ],
+      "metaSortKey": 35,
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"title\": \"Mesa de jantar 6 lugares\",\n  \"description\": \"Madeira maciça, ótimo estado.\",\n  \"price\": 2500,\n  \"category\": \"moveis\",\n  \"images\": [\"https://img.example.com/foto.jpg\"]\n}"
+      }
+    },
+    {
+      "_id": "req_36",
+      "_type": "request",
+      "parentId": "fld_down",
+      "name": "6.2 Acompanhar o anúncio pendente",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/ads/{{ _.ad_id }}",
+      "description": "**Esperado:** `pending_moderation` enquanto o mock estiver parado; `approved` em até ~60 s depois de religá-lo.",
+      "headers": [],
+      "metaSortKey": 36,
+      "body": {}
+    }
+  ]
+}
