@@ -1,0 +1,6 @@
+target
+.git
+.idea
+backend
+docs
+*.md

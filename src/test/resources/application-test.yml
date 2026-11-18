@@ -1,0 +1,9 @@
+moderation:
+  client:
+    connect-timeout: 1s
+    read-timeout: 2s
+    max-attempts: 3
+    backoff: 5ms
+    max-retry-after: 20ms
+  retry:
+    enabled: false

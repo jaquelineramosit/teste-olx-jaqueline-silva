@@ -1,0 +1,43 @@
+sequenceDiagram
+    autonumber
+    actor C as Cliente
+    participant API as AdController
+    participant UC as CreateAdService
+    participant D as Ad (domínio)
+    participant R as AdRepository<br/>(AdPersistenceAdapter)
+    participant M as AdModerator
+    participant G as ModerationGateway<br/>(HttpModerationGateway)
+    participant EXT as API de moderação
+    participant DB as PostgreSQL
+
+    C->>API: POST /api/v1/ads (JSON)
+    API->>API: Bean Validation (estrutura do payload)
+    API->>UC: create(CreateAdCommand)
+    UC->>D: Ad.create(...) valida invariantes
+    D-->>UC: Ad [PENDING_MODERATION]
+    UC->>R: save(ad)
+    R->>DB: INSERT ads + ad_images (transação curta)
+    UC->>M: moderate(ad)
+    M->>G: check(ad)
+    Note over G,EXT: sem transação de banco aberta durante a chamada HTTP
+
+    alt resposta 200 válida
+        G->>EXT: POST /v1/moderation/check
+        EXT-->>G: 200 {status: approved | rejected, reason}
+        G-->>M: Approved | Rejected(reason)
+        M->>D: approve() | reject(reason)
+        M->>R: save(ad)
+        R->>DB: UPDATE ads ... WHERE status = PENDING (transação curta)
+        M-->>UC: Ad [APPROVED | REJECTED]
+    else falha técnica (timeout, conexão, 429, 5xx, resposta inválida)
+        G->>EXT: até 3 tentativas com backoff curto
+        EXT--xG: falha
+        G-->>M: ModerationUnavailableException
+        M->>M: log WARN, anúncio permanece PENDING_MODERATION
+        M-->>UC: Ad [PENDING_MODERATION]
+    end
+
+    UC-->>API: Ad
+    API-->>C: 201 Created + Location + AdResponse (status)
+
+    Note over M,EXT: Recuperação: PendingModerationScheduler chama<br/>RetryPendingModerationUseCase periodicamente,<br/>que reaplica AdModerator aos anúncios pendentes antigos

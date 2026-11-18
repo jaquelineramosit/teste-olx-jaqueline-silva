@@ -1,0 +1,50 @@
+flowchart LR
+    client([Cliente HTTP])
+
+    subgraph infra_in["Infrastructure — adapters de entrada"]
+        controller["AdController<br/>(REST /api/v1/ads)"]
+        advice["ApiExceptionHandler<br/>(Problem Details)"]
+        scheduler["PendingModerationScheduler<br/>(@Scheduled)"]
+    end
+
+    subgraph application["Application"]
+        subgraph port_in["Ports de entrada"]
+            createUC[[CreateAdUseCase]]
+            listUC[[ListAdsUseCase]]
+            getUC[[GetAdByIdUseCase]]
+            retryUC[[RetryPendingModerationUseCase]]
+        end
+        services["CreateAdService · ListAdsService<br/>GetAdByIdService · PendingModerationRetryService"]
+        moderator["AdModerator<br/>(interpreta resultado da moderação)"]
+        subgraph port_out["Ports de saída"]
+            repoPort[[AdRepository]]
+            gatewayPort[[ModerationGateway]]
+        end
+    end
+
+    subgraph domain["Domain (Java puro)"]
+        ad["Ad — Aggregate Root<br/>AdId · AdTitle · Price · ImageUrl<br/>Category · ModerationStatus · RejectionReason"]
+    end
+
+    subgraph infra_out["Infrastructure — adapters de saída"]
+        persistence["AdPersistenceAdapter<br/>(Spring Data JPA)"]
+        httpGateway["HttpModerationGateway<br/>(RestClient + timeout + retry curto)"]
+    end
+
+    db[(PostgreSQL<br/>ads · ad_images)]
+    moderation{{API de moderação<br/>POST /v1/moderation/check}}
+
+    client -->|HTTP/JSON| controller
+    controller --> createUC & listUC & getUC
+    scheduler --> retryUC
+    createUC & listUC & getUC & retryUC -.implementados por.-> services
+    services --> moderator
+    services --> repoPort
+    moderator --> gatewayPort
+    moderator --> repoPort
+    services --> ad
+    moderator --> ad
+    persistence -.implementa.-> repoPort
+    httpGateway -.implementa.-> gatewayPort
+    persistence --> db
+    httpGateway -->|HTTP| moderation

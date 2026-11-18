@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: marketplace-ads
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/marketplace}
+    username: ${DB_USERNAME:marketplace}
+    password: ${DB_PASSWORD:marketplace}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  jackson:
+    default-property-inclusion: always
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-stacktrace: never
+    include-message: never
+
+moderation:
+  client:
+    base-url: ${MODERATION_BASE_URL:http://localhost:8787}
+    connect-timeout: ${MODERATION_CONNECT_TIMEOUT:1s}
+    # o mock responde em até 2 s; acima disso consideramos falha técnica
+    read-timeout: ${MODERATION_READ_TIMEOUT:2500ms}
+    max-attempts: ${MODERATION_MAX_ATTEMPTS:3}
+    backoff: ${MODERATION_BACKOFF:200ms}
+    max-retry-after: ${MODERATION_MAX_RETRY_AFTER:2s}
+  retry:
+    enabled: ${MODERATION_RETRY_ENABLED:true}
+    interval: ${MODERATION_RETRY_INTERVAL:PT30S}
+    min-age: ${MODERATION_RETRY_MIN_AGE:PT30S}
+    batch-size: ${MODERATION_RETRY_BATCH_SIZE:10}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  pattern:
+    correlation: "[%X{correlationId:-}] "
+  include-application-name: false
