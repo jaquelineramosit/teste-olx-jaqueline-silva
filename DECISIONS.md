@@ -196,7 +196,7 @@ Resumo (detalhes e impacto em `docs/REQUIREMENTS_ANALYSIS.md`):
 
 ## 5. Tempo gasto
 
-Aproximadamente **4 horas** até a validação ponta a ponta (estimativa da candidata), entre leitura dos enunciados,
+Aproximadamente **6 horas** até a validação ponta a ponta (estimativa da candidata), entre leitura dos enunciados,
 análise, revisão do código gerado com IA, execução e correção dos testes e preparação do ambiente (instalação do Docker
 Desktop com WSL 2 no Windows).
 
