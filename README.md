@@ -213,6 +213,25 @@ docker compose --profile seed run --rm seed
 O script `scripts/seed-ads.mjs` lê `backend/api-mock/seed/ads.json` e cadastra os 57 anúncios **pela própria API**, ou
 seja, cada um passa pela moderação real. O seed não traz imagens, então o script usa uma URL placeholder.
 
+### Rodar a API pela IDE (debug)
+
+Suba só as dependências no Docker e rode `MarketplaceAdsApplication` em modo debug. Os valores padrão do
+`application.yml` já apontam para `localhost:5432` (banco) e `localhost:8787` (mock).
+
+```bash
+docker compose stop app
+docker compose up -d postgres moderation-api
+```
+
+Recomendado: `MODERATION_RETRY_ENABLED=false` nas variáveis de ambiente da IDE, para o job de reprocessamento (outra
+thread, a cada 30 s) não parar nos mesmos breakpoints da requisição.
+
+> **Porta 5432 ocupada por um PostgreSQL instalado na máquina?** A conexão cai no banco local e falha com
+> `password authentication failed for user "marketplace"`. Publique o banco do Docker em outra porta
+> (`POSTGRES_PORT=5433` no `.env`, copiado de `.env.example`) e use
+> `DB_URL=jdbc:postgresql://localhost:5433/marketplace` na IDE. Dentro do `docker compose` isso não acontece, porque a
+> API acessa o banco pela rede interna (`postgres:5432`).
+
 ### Parar
 
 ```bash
